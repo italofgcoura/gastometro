@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+if (__DEV__) {
+  import('./ReactotronConfig').then(() => console.log('Reactotron Configured'))
+}
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, KeyboardAvoidingView, Keyboard, Platform, Button } from 'react-native';
 import Titulo1 from './components/titulo1';
 import Constants from 'expo-constants';
 import Transacoes from './components/transacoes';
-
+import Reactotron from 'reactotron-react-native';
 
 
 export default function App() {
@@ -12,38 +15,56 @@ export default function App() {
   const [transacoes, setTransacao] = useState([]);
 
   // adcionando novas transações
-  const [campoTransacao, setCampoTransacao] = useState('');
-  const [campoValorTransacao, setValorCampoTransacao] = useState('');
+  const [campoDescricaoTransacao, setCampoDescricaoTransacao] = useState('');
+  const [_campoValorTransacao, setValorCampoDescricaoTransacao] = useState('');
   const [_totalGastos, setTotalGasto] = useState(0.00);
+  const [_saldoFinal, setSaldoFinal] = useState(0.00);
+  const [_tipoTransacao, setTipoTransacao] = useState('');
 
   let _addTransacao;
   // let _totalGastos;
 
+
   // função para retornar o total dos gastos
   const totalGastos = () => {
-    let _totalGastos = 0;
+    let _totalSaidas = 0;
+    let _totalEntradas = 0;
+    let _saldo = 0;
+
+    // verificar se o tipo de entrada é gasto ou ganho
     transacoes.map((element) => {
-      _totalGastos += parseFloat(element.valor);
-      console.log('total', _totalGastos);
+      if (element.tipo == 'saida') {
+        _totalSaidas += parseFloat(element.valor);
+      }
+      else{
+        _totalEntradas += parseFloat(element.valor);
+      }
+      Reactotron.log('saidas', _totalSaidas);
+      Reactotron.log('entradas', _totalEntradas);
     })
-    setTotalGasto(_totalGastos);
+
+    // encontrar o saldo que a pessoa possui
+    _saldo = _totalEntradas - _totalSaidas;
+    setTotalGasto(_totalSaidas);
+    setSaldoFinal(_saldo)
+    Reactotron.log('totalsaidas', _totalSaidas);
+    Reactotron.log('totalentradas', _totalEntradas);
   }
 
 
   // função para adcionar novas tarefas
-  const adcionaTransacao = (desc, value) => {
+  const adcionaTransacao = (desc, value, tpTransacao) => {
 
     if (desc.length > 0 && value > 0) {
       const novaTransacao = {
         id: Math.random().toString(),
         descricao: desc,
         valor: value,
+        tipo: tpTransacao
       }
-
-      setTransacao([...transacoes, novaTransacao]);
-      setCampoTransacao('');
-      setValorCampoTransacao('');
-
+      setTransacao(transacoes.concat(novaTransacao));
+      setCampoDescricaoTransacao('');
+      setValorCampoDescricaoTransacao('');
     }
     // para remover o teclado quando apertar no botão de adcionar nova transação
     _addTransacao.blur();
@@ -51,8 +72,7 @@ export default function App() {
   }
 
   const exibeVetor = () => {
-    console.log('depois de set transacoes', transacoes)
-
+    Reactotron.log('depois de set transacoes', transacoes)
   }
   // função para remover uma transação
   // recebe o id da transação através do press que vai chamar a função passando o id por parâmetro
@@ -60,8 +80,8 @@ export default function App() {
   // todas transações que tiverem o id diferente do id recebido -> t.id !== id <- vão ser retornadas para um novo vetor
   // que vai ser passada para o setTransacao
   const apagaTransacao = (id) => {
-    console.log(id);
-    setTransacao(transacoes.filter((t) => t.id !== id))
+    setTransacao(transacoes.filter((t) => t.id !== id));
+    totalGastos()
   };
 
 
@@ -74,6 +94,13 @@ export default function App() {
     novaListaTransacoes[i].descricao = desc; //substituição da descrição no posição i
     setTransacao(novaListaTransacoes); //chamada do setTransações passando a nova lista de transações
   }
+
+
+  useEffect(() => {
+    exibeVetor();
+    totalGastos();
+
+  }, [transacoes]);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS == 'ios' ? 'padding' : 'height'} style={styles.out}>
@@ -91,26 +118,32 @@ export default function App() {
         {/* descrição */}
         <TextInput style={styles.campoEntradaTransacaoTexto} placeholder='Nova transação'
 
-          defaultValue={campoTransacao}
-          onChangeText={(campoTransacao) => setCampoTransacao(campoTransacao)}
+          defaultValue={campoDescricaoTransacao}
+          onChangeText={(campoDescricaoTransacao) => setCampoDescricaoTransacao(campoDescricaoTransacao)}
 
-          onSubmitEditing={() => adcionaTransacao(campoTransacao)}
+          // onSubmitEditing={() => adcionaTransacao(campoDescricaoTransacao)}
           // onBlur={Keyboard.dismiss}
           ref={(r) => (_addTransacao = r)}
         />
 
-        {/* valor */}
-        <TextInput style={styles.campoEntradaTransacaoTexto} placeholder='Valor'
-          keyboardType='numeric'
-          defaultValue={campoValorTransacao}
-          onChangeText={(campoValorTransacao) => setValorCampoTransacao(campoValorTransacao)}
+        <View style={styles.valor}>
+          {/* valor */}
+          <TextInput style={styles.campoEntradaTransacaoTexto} placeholder='Valor'
+            keyboardType='numeric'
+            defaultValue={_campoValorTransacao}
+            onChangeText={(_campoValorTransacao) => setValorCampoDescricaoTransacao(_campoValorTransacao)}
 
-          onSubmitEditing={() => { adcionaTransacao(campoValorTransacao) }}
-          // onBlur={Keyboard.dismiss}
-          ref={(r) => (_addTransacao = r)}
-        />
-
-        <Button title="Adcionar Transação" onPress={() => { adcionaTransacao(campoTransacao, parseFloat(campoValorTransacao)); totalGastos(); exibeVetor() }} />
+            // onSubmitEditing={() => { adcionaTransacao(_campoValorTransacao) }}
+            // onBlur={Keyboard.dismiss}
+            ref={(r) => (_addTransacao = r)}
+          />
+          <View style={styles.tipoValor}>
+            <Button style={styles.tipoValorTexto} title="Entrada" onPress={() => setTipoTransacao('entrada')}>Entrada</Button>
+            <Button style={styles.tipoValorTexto} title="Saída" onPress={() => setTipoTransacao('saida')}>Saída</Button>
+            <Text>{_tipoTransacao}</Text>
+          </View>
+        </View>
+        <Button title="Adcionar Transação" onPress={() => { adcionaTransacao(campoDescricaoTransacao, parseFloat(_campoValorTransacao), _tipoTransacao); }} />
 
       </View>
       <View style={styles.resumo}>
@@ -120,7 +153,7 @@ export default function App() {
       </View>
       <View style={styles.resumo}>
         <Text style={styles.resumoTexto}>Saldo</Text>
-        <Text style={styles.resumoTexto}>R$ 0,00</Text>
+        <Text style={styles.resumoTexto}>R$ {_saldoFinal.toFixed(2)}</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -161,6 +194,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#01B7D4',
     backgroundColor: 'white',
-    marginTop: 1
+
+  },
+  valor: {
+    flexDirection: 'row'
+  },
+  tipoValor: {
+    flex: 1,
+    justifyContent: 'center',
+    flexDirection: 'column',
+    borderWidth: 1,
+    borderColor: '#01B7D4'
+  },
+  tipoValorTexto: {
+    alignItems: 'center',
+    textAlign: 'center'
   }
 });

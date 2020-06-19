@@ -13,6 +13,7 @@ export default function Transacoes(props) {
                     id={item.id}
                     descricao={item.descricao}
                     valor={item.valor}
+                    tipo={item.tipo}
                     onApaga={props.onApaga}
                     onAltera={props.onAltera} />
             )}

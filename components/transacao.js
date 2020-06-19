@@ -7,6 +7,7 @@ export default function Transacao(props) {
             <View style={styles.itemIn} key={props.id}>
                 <Text style={styles.itemTexto}>{props.descricao}</Text>
                 <Text style={styles.itemTexto}>{props.valor}</Text>
+                <Text style={styles.itemTexto}>{props.tipo}</Text>
                 <View>
                     <TouchableOpacity onPress={() => props.onApaga(props.id)}>
                         <Text style={styles.apagar}>Apagar</Text>
